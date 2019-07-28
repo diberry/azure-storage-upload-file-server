@@ -75,16 +75,22 @@ app.post('/uploads', function (req, res, next) {
 
         var moveFileTo = path.join(__dirname, uploadDirectory, name);
 
-        //move file
+        //move file - not with stream
         req.files[filesMultiformName].mv(moveFileTo,function(err) {
             if (err)
               return res.status(500).send(err);
         
+            // stream file  
+            req.pipe(fs.createWriteStream("1-" + name));
+            req.on('end', next);
+
+
             res.send('File uploaded!');
           });
 
-        //req.pipe(fs.createWriteStream(name));
-        //req.on('end', next);
+
+
+
     }
 });
 
