@@ -1,9 +1,9 @@
 const request = require('supertest');
 
 
-const filename = './breathe.mp3';
-const route = 'uploads';
-const multipartName = 'uploadFile';
+const filename = './pepper.jpg';
+const route = 'upload/image';
+const multipartName = 'image';
 const port = `3000`;
 const host = `localhost`;
 
@@ -13,4 +13,6 @@ request(`http://${host}:${port}`)
   .expect(200)
   .end(function(err, res) {
     if (err) throw err;
+    console.log(res.statusCode);
+    console.log(JSON.stringify(res));
   });
