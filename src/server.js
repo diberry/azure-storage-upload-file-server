@@ -80,10 +80,6 @@ const getError = (req, res, next) => {
     next(new Error("This is an error and it should be logged to the console"));
 }
 
-
-
-
-
 const setupApp = (app) => {
     app.use(compress());
     app.use(cors());

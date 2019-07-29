@@ -2,8 +2,8 @@ const request = require('supertest');
 
 
 const filename = './breathe.mp3';
-const route = 'uploads';
-const multipartName = 'uploadFile';
+const route = 'upload';
+const multipartName = 'uploadedFile';
 const port = `3000`;
 const host = `localhost`;
 
