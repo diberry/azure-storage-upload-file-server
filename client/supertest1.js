@@ -2,8 +2,8 @@ const request = require('supertest');
 
 
 const filename = './pepper.jpg';
-const route = 'upload/image';
-const multipartName = 'image';
+const route = 'upload';
+const multipartName = 'uploadedFile';
 const port = `3000`;
 const host = `localhost`;
 
