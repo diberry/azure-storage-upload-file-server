@@ -14,12 +14,13 @@ const inMemoryStorage = multer.memoryStorage();
 const singleFileUpload = multer({ storage: inMemoryStorage });
 const getStream = require('into-stream');
 
-const secret = "1234$#@!";
+// environment variables
+const secret = process.env.SESSIONSECRET; // doesn't use sessions at the moment
+const azureStorageConnectionString = process.env.AZURESTORAGE;
+const azureBlobUrl = process.env.AZUREBLOBURL;
+
 const timeoutLimit = 900000;
 const port = 3000;
-const containerName = "streaminguploads";
-const azureStorageConnectionString = process.env.AZURESTORAGE;
-const azureBlobUrl = "diberryassetmgrtest.file.core.windows.net";
 
 if(!azureStorageConnectionString) throw("azureStorageConnectionString is empty");
 
@@ -31,21 +32,31 @@ const getBlobName = originalName => {
  
 const uploadFile = async(req, res, next) => {
     try {
-        const file = await uploadFileToBlob('myfiles', req.file); // images is a directory in the Azure container
-        return res.json(file);
+
+        const directory = req.body.directory; 
+        const container = req.body.container;
+        const uploadResponse = await uploadFileToBlob(container, directory, req.file); 
+        return res.json(uploadResponse);
     } catch (error) {
         console.log(error);
         next(error);
     }
 }
 
-const uploadFileToBlob = async (directoryPath, file) => {
+const uploadFileToBlob = async (container, directory, file) => {
  
     return new Promise((resolve, reject) => {
  
         const blobName = getBlobName(file.originalname);
         const stream = getStream(file.buffer);
         const streamLength = file.buffer.length;
+
+        if(!blobName || !streamLength) throw ("can't find file info");
+
+        container = container.toLowerCase();
+        directory = directory.toLowerCase();
+
+        if(!container || !directory) throw ("can't find container and directory names");
  
         const blobService = azureStorage.createBlobService(azureStorageConnectionString); 
         
@@ -53,14 +64,14 @@ const uploadFileToBlob = async (directoryPath, file) => {
             publicAccessLevel: 'blob'
         };
 
-        blobService.createContainerIfNotExists(containerName,containerOptions, (error, result) => {
+        blobService.createContainerIfNotExists(container,containerOptions, (error, result) => {
 
             if(error) {
                 console.log(error);
                 throw error;
             }
 
-            blobService.createBlockBlobFromStream(containerName, `${directoryPath}/${blobName}`, stream, streamLength, (err,result) => {
+            blobService.createBlockBlobFromStream(container, `${directory}/${blobName}`, stream, streamLength, (err,result) => {
                 if (err) {
                     console.log(err);
                     reject(err);
@@ -68,8 +79,8 @@ const uploadFileToBlob = async (directoryPath, file) => {
                     resolve({ filename: blobName, 
                         originalname: file.originalname, 
                         size: streamLength, 
-                        path: `${containerName}/${directoryPath}/${blobName}`,
-                        url: `${azureBlobUrl}${containerName}/${directoryPath}/${blobName}` });
+                        path: `${container}/${directory}/${blobName}`,
+                        url: `${azureBlobUrl}${container}/${directory}/${blobName}` });
                 }
             });
         });
@@ -103,14 +114,12 @@ const routes = (app) => {
         }
     });
     app.get('/', (req, res, next) => {
-        res.send("hello world");
-    });
-    
-    app.get('/upload', function (req, res) {
         res.send(
         '<form action="/upload" method="post" enctype="multipart/form-data">' +
-        '<input type="file" name="uploadedFile" />' +
-        '<input type="submit" value="Upload" />' +
+        '<input type="file" name="uploadedFile" /><br>' +
+        '<input type="text" name="container" value="myContainer" /><br>' + 
+        '<input type="text" name="directory" value="myDirectory" /><br>' +
+        '<input type="submit" value="Upload" /><br>' +
         '</form>'
         );
     });
