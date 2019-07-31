@@ -1,7 +1,6 @@
 require('dotenv').config();
 var express = require('express');
 var bodyParser = require('body-parser');
-const azureStorage = require('azure-storage');
 
 const compress = require('compression'),
     cors = require('cors'),
@@ -12,80 +11,14 @@ const compress = require('compression'),
 const multer = require('multer')
 const inMemoryStorage = multer.memoryStorage();
 const singleFileUpload = multer({ storage: inMemoryStorage });
-const getStream = require('into-stream');
+
+const azureStorage = require('./azureStorage.js');
 
 // environment variables
 const secret = process.env.SESSIONSECRET; // doesn't use sessions at the moment
-const azureStorageConnectionString = process.env.AZURESTORAGE;
-const azureBlobUrl = process.env.AZUREBLOBURL;
 
 const timeoutLimit = 900000;
 const port = 3000;
-
-if(!azureStorageConnectionString) throw("azureStorageConnectionString is empty");
-
-// GUID-originalfilename
-const getBlobName = originalName => {
-    const identifier = Math.random().toString().replace(/0\./, ''); // remove "0." from start of string
-    return `${identifier}-${originalName}`;
-};
- 
-const uploadFile = async(req, res, next) => {
-    try {
-
-        const directory = req.body.directory; 
-        const container = req.body.container;
-        const uploadResponse = await uploadFileToBlob(container, directory, req.file); 
-        return res.json(uploadResponse);
-    } catch (error) {
-        console.log(error);
-        next(error);
-    }
-}
-
-const uploadFileToBlob = async (container, directory, file) => {
- 
-    return new Promise((resolve, reject) => {
- 
-        const blobName = getBlobName(file.originalname);
-        const stream = getStream(file.buffer);
-        const streamLength = file.buffer.length;
-
-        if(!blobName || !streamLength) throw ("can't find file info");
-
-        container = container.toLowerCase();
-        directory = directory.toLowerCase();
-
-        if(!container || !directory) throw ("can't find container and directory names");
- 
-        const blobService = azureStorage.createBlobService(azureStorageConnectionString); 
-        
-        const containerOptions = {
-            publicAccessLevel: 'blob'
-        };
-
-        blobService.createContainerIfNotExists(container,containerOptions, (error, result) => {
-
-            if(error) {
-                console.log(error);
-                throw error;
-            }
-
-            blobService.createBlockBlobFromStream(container, `${directory}/${blobName}`, stream, streamLength, (err,result) => {
-                if (err) {
-                    console.log(err);
-                    reject(err);
-                } else {
-                    resolve({ filename: blobName, 
-                        originalname: file.originalname, 
-                        size: streamLength, 
-                        path: `${container}/${directory}/${blobName}`,
-                        url: `${azureBlobUrl}${container}/${directory}/${blobName}` });
-                }
-            });
-        });
-    });
-};
 
 const getError = (req, res, next) => {
     next(new Error("This is an error and it should be logged to the console"));
@@ -123,7 +56,9 @@ const routes = (app) => {
         '</form>'
         );
     });
-    app.post('/upload', singleFileUpload.single('uploadedFile'), uploadFile)
+
+    app.post('/upload', singleFileUpload.single('uploadedFile'), azureStorage.uploadFile);
+
     app.use(function (err, req, res, next) {
         if (err.message == "Not Found" || err.statusCode == 404) {
             return res.status(404).send("file not found");
