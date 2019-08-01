@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload Server</title>
+</head>
+<body>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="uploadedFile" /><br>
+        <input type="text" name="container" value="myContainer" /><br>
+        <input type="text" name="directory" value="myDirectory" /><br>
+        <input type="submit" value="Upload" /><br>
+    </form>
+</body>
+</html>
