@@ -20,11 +20,14 @@ const setupApp = (app) => {
     app.use(cors());
     app.use(express.json());
     app.use(timeout(timeoutLimit));
-    app.use(session({secret: secret}))
+    app.use(session({secret: secret}));
     app.use(bodyParser.json());
     app.use(bodyParser.urlencoded({
         extended: false
     }));
+
+    // root request to static files
+    app.use(express.static(__dirname + '/assets')); // *.css, *.png
 
     app.config = {
         'messages': {
@@ -41,7 +44,9 @@ const get = () => {
 
       setupApp(app);
       routes.setUpRoutes(app);
+
       console.log(`environment: ${app.get('env')}`);
+      
       return app;
   
     } catch (err) {
