@@ -60,20 +60,23 @@ const uploadFileToBlob = async (container, directory, file, instructions, messag
  
     try{
     return new Promise((resolve, reject) => {
+
+        if(!container || !directory || !file) throw ("uploadFileToBlob - missing params");
  
         const blobName = getBlobName(file.originalname);
-        const stream = getStream(file.buffer);
-        const streamLength = file.buffer.length;
+        if (!blobName ) throw ("uploadFileToBlob - can't get blobName");
 
-        if(!blobName || !streamLength) throw ("can't find file info");
+        if(!file.buffer) throw ("uploadFileToBlob - can't get file.buffer");
+        const stream = getStream(file.buffer);
+        if (!stream ) throw ("uploadFileToBlob - can't get stream");
+
+        const streamLength = file.buffer.length;
+        if (!streamLength) throw ("uploadFileToBlob - can't get stream length");
 
         container = container.toLowerCase();
         directory = directory.toLowerCase();
 
-        if(!container || !directory) throw ("can't find container and directory names");
- 
-        console.log(`container = ${container}`);
-        console.log(`directory = ${directory}`);
+        if(!container || !directory) throw ("uploadFileToBlob - can't find container and directory names");
         
         const containerOptions = {
             publicAccessLevel: 'blob'
@@ -82,13 +85,11 @@ const uploadFileToBlob = async (container, directory, file, instructions, messag
         blobService.createContainerIfNotExists(container,containerOptions, async (error, result) => {
 
             if(error) {
-                console.log(error);
                 throw error;
             }
 
             blobService.createBlockBlobFromStream(container, `${directory}/${blobName}`, stream, streamLength, async (err,result) => {
                 if (err) {
-                    console.log(err);
                     reject(err);
                 } else {
 
@@ -109,8 +110,6 @@ const uploadFileToBlob = async (container, directory, file, instructions, messag
 
                         message.queueResults = await addMessageToQueue(container, message);
                     }
-
-                    console.log(JSON.stringify(message));
 
                     resolve(message);
                 }
